@@ -18,6 +18,7 @@
 
 using namespace std;
 
+//state variables, set from socket communication via lua
 std::string currentVehicle = "pickup";
 std::string currentVehiclename = "Gavril D-Series";
 std::string currentMap = "smallgrid";
@@ -59,7 +60,9 @@ std::string VerifyStr(std::string str, int len) {
 
 void UpdatePresence()
 {
-    //cout << "Updating presence" << endl;
+#if _DEBUG
+    printf("Updating presence\n");
+#endif
 
     char buffer[256];
     DiscordRichPresence discordPresence;
@@ -121,14 +124,20 @@ void UpdatePresence()
     //timer
     if (timerType > 0) {
         //countdown
+#if _DEBUG
         printf("DEBUG:A timer is specified\n");
+#endif
         if (timerType == 1) {
             discordPresence.endTimestamp = lastTime;
+#if _DEBUG
             printf("DEBUG:TYPE=COUNTDOWN\n");
+#endif
         }
         else if (timerType == 2) {
             discordPresence.startTimestamp = lastTime;
+#if _DEBUG
             printf("DEBUG:TYPE=COUNTUP\n");
+#endif
         }
     }
 
@@ -137,14 +146,14 @@ void UpdatePresence()
 }
 
 void handleDiscordReady() {
-    cout << "Discord is ready!" << endl;
+    printf("Discord is ready!\n");
     UpdatePresence();
 }
 
 void handleDiscordError(int errorCode, const char* message) {
-    cout << "An error occurred in Discord RPC" << endl;
-    cout << "Error code: " << errorCode << endl;
-    cout << "Message: " << message << endl;
+    printf("An error occurred in Discord RPC\n");
+    printf("Error code: %d \n", errorCode);
+    printf("Message: %s \n", message);
 }
 
 void InitDiscord()
@@ -321,7 +330,9 @@ int main(int argc, char* argv[])
             continue; // no use in trying to debug / process empty messages
 
         auto splits = split(message, "|");
-        cout << "message debug:" << message<< endl;
+#if _DEBUG
+        printf("message debug: %s \n", message);
+#endif
 
         if (message == "quit") {
             break;
