@@ -93,6 +93,7 @@ void UpdatePresence()
     }
     else if (state == "bus") {
         discordPresence.details = "Playing Bus Route";
+        discordPresence.state = exif.c_str();
     }
     else {
         discordPresence.details = "ERR:Unknown state!";
