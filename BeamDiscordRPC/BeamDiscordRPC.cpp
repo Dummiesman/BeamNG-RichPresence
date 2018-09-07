@@ -31,7 +31,7 @@ int timerType = 0;
 
 //MASSIVE LISTS!
 std::list<std::string> defaultVehicles{ "ball", "barrels", "barrier", "barstow", "blockwall", "bollard", "boxutility", "boxutility_large",
-                                        "burnside", "cannon", "caravan", "christmas_tree", "cones", "coupe", "dryvan", "etk800", "etkc",
+                                        "burnside", "cannon", "caravan", "citybus", "christmas_tree", "cones", "coupe", "dryvan", "etk800", "etkc",
                                         "etki", "flail", "flatbed", "flipramp", "fullsize", "hatch", "haybale", "hopper", "inflated_mat",
                                         "kickplate", "large_angletester", "large_bridge", "large_cannon", "large_crusher", "large_hamster_wheel",
                                         "large_metal_ramp", "large_roller", "large_spinner", "large_tilt", "legran", "metal_box", "metal_ramp",
@@ -90,6 +90,9 @@ void UpdatePresence()
     else if (state == "quickrace") {
         discordPresence.details = "Playing Quick Race";
         discordPresence.state = exif.c_str();
+    }
+    else if (state == "bus") {
+        discordPresence.details = "Playing Bus Route";
     }
     else {
         discordPresence.details = "ERR:Unknown state!";
@@ -279,7 +282,7 @@ std::string GetLastMessage() {
 }
 
 inline bool IsBeamNGRunning() {
-    return IsProcessRunning(L"BeamNG.drive.exe");
+    return IsProcessRunning(L"BeamNG.drive.x64.exe") || IsProcessRunning(L"BeamNG.drive.x86.exe");
 }
 
 int main(int argc, char* argv[])
@@ -316,7 +319,7 @@ int main(int argc, char* argv[])
     while (true) {
         //Check if BeamNG running. If we missed the `quit` message
         //this will break the loop and cleanly exit Discord RPC's thread
-        if (!IsProcessRunning(L"BeamNG.drive.exe")) {
+        if (!IsBeamNGRunning()) {
             printf("Warning:BeamNG not found!\n");
             break;
         }
