@@ -60,8 +60,11 @@ local function setRpcInfo()
     udpSocket:sendto('exif|' .. getLocString(campaign.meta.title), ip, port)
   elseif scenario then
     local isQuick = scenario.isQuickRace or false
+    local isBus = scenario.stopCount ~= nil
     if isQuick then
       udpSocket:sendto('state|quickrace', ip, port)
+    elseif isBus then
+      udpSocket:sendto('state|bus', ip, port)
     else
       udpSocket:sendto('state|scenario', ip, port)
     end
@@ -74,7 +77,7 @@ local function setRpcInfo()
   end
 end
 
-local function onClientStartMission(mission)
+local function onClientPostStartMission(mission)
   --update locals
   loaded = true
   listenForStateChanges = true
@@ -135,53 +138,62 @@ end
 
 local lastVehicleName = ""
 local function setVehicle(vehicleFolder, partconfig)
-  if vehicleFolder ~= lastVehicleName then
-    lastVehicleName = vehicleFolder
-    udpSocket:sendto('vehicle|' .. lastVehicleName:lower(), ip, port)
-    
-    -- try and parse vehicle name
-    local infoPath = "vehicles/" .. lastVehicleName .. "/info.json"
-    if FS:fileExists(infoPath) then
-      --grab our info file
-      local vehicleInfo = vehicleInfoCache[infoPath] or readJsonFile(infoPath)
-      if vehicleInfoCache[infoPath] == nil then vehicleInfoCache[infoPath] = vehicleInfo end
-      
-      --send [Brand] [Name] if possible
-      local vehicleDisplayName = nil
-      if vehicleInfo["Brand"] ~= nil then
-        vehicleDisplayName = vehicleInfo["Brand"] .. " " .. vehicleInfo["Name"]
-      elseif vehicleInfo["Name"] ~= nil then
-        vehicleDisplayName = vehicleInfo["Name"]
-      else
-        vehicleDisplayName = lastVehicleName
-      end
-      
-      --also show the part config if possible
-      if partconfig ~= nil and partconfig:len() > 0 then
-        local pcJsonPath = getPCInfoFilePath(vehicleFolder, partconfig)
-        if FS:fileExists(pcJsonPath) then
-          local pcData = partConfigInfoCache[pcJsonPath] or readJsonFile(pcJsonPath)
-          if partConfigInfoCache[pcJsonPath] == nil then partConfigInfoCache[pcJsonPath] = pcData end
-          
-          if pcData["Configuration"] ~= nil then
-            vehicleDisplayName = vehicleDisplayName .. " " .. pcData["Configuration"]
-          end
-        end
-      end
-      
-      --finally, send data
-      udpSocket:sendto('vehiclename|' .. vehicleDisplayName, ip, port)
-    else
-      udpSocket:sendto('vehiclename|' .. lastVehicleName, ip, port)
-    end
-    
-    udpSocket:sendto('update', ip, port)
+   --no need to send a useless update
+  if vehicleFolder == lastVehicleName then
+    return
   end
+  
+  --set last vehicle
+  lastVehicleName = vehicleFolder
+  udpSocket:sendto('vehicle|' .. lastVehicleName:lower(), ip, port)
+  
+  -- try and parse vehicle name
+  local infoPath = "vehicles/" .. lastVehicleName .. "/info.json"
+  if not FS:fileExists(infoPath) then
+    udpSocket:sendto('vehiclename|' .. lastVehicleName, ip, port)
+    udpSocket:sendto('update', ip, port)
+    return
+  end
+
+  --grab our info file
+  local vehicleInfo = vehicleInfoCache[infoPath] or readJsonFile(infoPath)
+  if vehicleInfoCache[infoPath] == nil then vehicleInfoCache[infoPath] = vehicleInfo end
+  
+  --send [Brand] [Name] if possible
+  local vehicleDisplayName = nil
+  if vehicleInfo["Brand"] ~= nil then
+    vehicleDisplayName = vehicleInfo["Brand"] .. " " .. vehicleInfo["Name"]
+  elseif vehicleInfo["Name"] ~= nil then
+    vehicleDisplayName = vehicleInfo["Name"]
+  else
+    vehicleDisplayName = lastVehicleName
+  end
+  
+  --also show the part config if possible
+  if partconfig ~= nil and partconfig:len() > 0 then
+    local pcJsonPath = getPCInfoFilePath(vehicleFolder, partconfig)
+    if FS:fileExists(pcJsonPath) then
+      local pcData = partConfigInfoCache[pcJsonPath] or readJsonFile(pcJsonPath)
+      if partConfigInfoCache[pcJsonPath] == nil then partConfigInfoCache[pcJsonPath] = pcData end
+      
+      if pcData["Configuration"] ~= nil then
+        vehicleDisplayName = vehicleDisplayName .. " " .. pcData["Configuration"]
+      end
+    end
+  end
+  
+  --finally, send data
+  udpSocket:sendto('vehiclename|' .. vehicleDisplayName, ip, port)
+  udpSocket:sendto('update', ip, port)
+
 end
 
 local function onVehicleSwitched(oldVehicleID, newVehicleID, player)
-  --only do this once we've started!
+  --only do this once we've started, and if we're the main player
   if not loaded then return end
+  if player ~= 0 then return end
+  
+  --update presence
   udpSocket:sendto('showvehicle', ip, port)
   
   local sceneVehicle = scenetree.findObjectById(newVehicleID)
@@ -236,7 +248,7 @@ local function onScenarioChange(scenario)
   end
 end
 
-local function onScenarioRaceCountingDone()
+local function onCountdownEnded()
   udpSocket:sendto('synctimer', ip, port)
   
   --check our timer type (countdown or countup)
@@ -244,11 +256,9 @@ local function onScenarioRaceCountingDone()
   udpSocket:sendto('timertype|2', ip, port)
   if scenario.goals ~= nil and scenario.goals.vehicles ~= nil then
     for k,v in pairs(scenario.goals.vehicles) do
-      if v.id == "timeLimit" then
-        if v.value.maxTime ~= nil then 
-          udpSocket:sendto('timertype|1', ip, port)
-          udpSocket:sendto('addtime|' .. tostring(math.ceil(v.value.maxTime)), ip, port)
-        end
+      if v.id == "timeLimit" and v.value.maxTime ~= nil then
+        udpSocket:sendto('timertype|1', ip, port)
+        udpSocket:sendto('addtime|' .. tostring(math.ceil(v.value.maxTime)), ip, port)
       end
     end
   end
@@ -263,12 +273,12 @@ end
 
 --publics
 M.onScenarioChange = onScenarioChange
-M.onScenarioRaceCountingDone = onScenarioRaceCountingDone
+M.onCountdownEnded = onCountdownEnded
 M.onExit = onExit
 M.onExtensionLoaded = onExtensionLoaded
 M.onVehicleSwitched = onVehicleSwitched
 M.onUpdate = onUpdate
-M.onClientStartMission = onClientStartMission
+M.onClientPostStartMission = onClientPostStartMission
 M.onClientEndMission = onClientEndMission
 
 --special publics
