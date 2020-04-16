@@ -40,7 +40,7 @@ std::list<std::string> defaultVehicles{ "autobello", "ball", "barrels", "barrier
                                         "tirestacks", "tirewall", "trafficbarrel", "tsfb", "tube", "van", "vivace", "wall", "weightpad", "woodcrate", "woodplanks"};
 
 std::list<std::string> defaultLevels{ "cliff", "derby", "driver_training", "east_coast_usa", "garage", "gridmap", "hirochi_raceway",
-                                      "industrial", "italy", "jungle_rock_island", "port", "showroom_v2_dark", "small_island", "smallgrid",
+                                      "industrial", "italy", "jungle_rock_island", "port", "showroom_v2_white", "small_island", "smallgrid",
                                       "template", "utah", "west_coast_usa"};
 
 bool debugMode = false;
