@@ -189,8 +189,8 @@ local function setVehicle(vehicleFolder, partconfig)
 end
 
 local function onVehicleSwitched(oldVehicleID, newVehicleID, player)
-  --only do this once we've started, and if we're the main player
-  if not loaded then return end
+  --only do this if we're the main player
+  --if not loaded then return end
   if player ~= 0 then return end
   
   --update presence

@@ -2,7 +2,7 @@
 //
 
 #include "stdafx.h"
-#include <discord-rpc.h>
+#include "include/discord_rpc.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -30,18 +30,20 @@ time_t lastTime;
 int timerType = 0;
 
 //MASSIVE LISTS!
-std::list<std::string> defaultVehicles{ "ball", "barrels", "barrier", "barstow", "blockwall", "bollard", "boxutility", "boxutility_large",
+std::list<std::string> defaultVehicles{ "autobello", "ball", "barrels", "barrier", "barstow", "blockwall", "bollard", "boxutility", "boxutility_large",
                                         "burnside", "cannon", "caravan", "citybus", "christmas_tree", "cones", "coupe", "dryvan", "etk800", "etkc",
                                         "etki", "flail", "flatbed", "flipramp", "fullsize", "hatch", "haybale", "hopper", "inflated_mat",
                                         "kickplate", "large_angletester", "large_bridge", "large_cannon", "large_crusher", "large_hamster_wheel",
                                         "large_metal_ramp", "large_roller", "large_spinner", "large_tilt", "legran", "metal_box", "metal_ramp",
                                         "midsize", "miramar", "moonhawk", "pessima", "piano", "pickup", "pigeon", "roadsigns", "roamer", "rocks",
                                         "rollover", "sawhorse", "sbr", "semi", "streetlight", "sunburst", "super", "suspensionbridge", "tanker",
-                                        "tirestacks", "tirewall", "trafficbarrel", "tsfb", "tube", "van", "wall", "weightpad", "woodcrate", "woodplanks"};
+                                        "tirestacks", "tirewall", "trafficbarrel", "tsfb", "tube", "van", "vivace", "wall", "weightpad", "woodcrate", "woodplanks"};
 
 std::list<std::string> defaultLevels{ "cliff", "derby", "driver_training", "east_coast_usa", "garage", "gridmap", "hirochi_raceway",
-                                      "industrial", "jungle_rock_island", "port", "showroom_v2_dark", "small_island", "smallgrid",
+                                      "industrial", "italy", "jungle_rock_island", "port", "showroom_v2_dark", "small_island", "smallgrid",
                                       "template", "utah", "west_coast_usa"};
+
+bool debugMode = false;
 
 bool IsDefaultVehicle(std::string key) {
     return std::find(defaultVehicles.begin(), defaultVehicles.end(), key) != defaultVehicles.end();
@@ -51,7 +53,7 @@ bool IsDefaultLevel(std::string key) {
     return std::find(defaultLevels.begin(), defaultLevels.end(), key) != defaultLevels.end();
 }
 
-std::string VerifyStr(std::string str, int len) {
+std::string VerifyStr(std::string str, unsigned int len) {
     if (str.length() > len) {
         return str.substr(0, len - 3) + "...";
     }
@@ -60,9 +62,8 @@ std::string VerifyStr(std::string str, int len) {
 
 void UpdatePresence()
 {
-#if _DEBUG
-    printf("Updating presence\n");
-#endif
+    if(debugMode)
+        printf("Updating presence\n");
 
     char buffer[256];
     DiscordRichPresence discordPresence;
@@ -119,29 +120,29 @@ void UpdatePresence()
         }
 
         //names
-        if (!currentMapname.empty() && showVehicle)
+        if (!currentMapname.empty())
             discordPresence.largeImageText = currentMapname.c_str();
-        if (!currentVehiclename.empty())
+        if (!currentVehiclename.empty() && showVehicle)
             discordPresence.smallImageText = currentVehiclename.c_str();
     }
 
     //timer
     if (timerType > 0) {
         //countdown
-#if _DEBUG
-        printf("DEBUG:A timer is specified\n");
-#endif
+        if(debugMode)
+            printf("DEBUG:A timer is specified\n");
+
         if (timerType == 1) {
             discordPresence.endTimestamp = lastTime;
-#if _DEBUG
-            printf("DEBUG:TYPE=COUNTDOWN\n");
-#endif
+                
+            if(debugMode)
+                printf("DEBUG:TYPE=COUNTDOWN\n");
         }
         else if (timerType == 2) {
             discordPresence.startTimestamp = lastTime;
-#if _DEBUG
-            printf("DEBUG:TYPE=COUNTUP\n");
-#endif
+            
+            if(debugMode)
+                printf("DEBUG:TYPE=COUNTUP\n");
         }
     }
 
@@ -149,7 +150,7 @@ void UpdatePresence()
     Discord_UpdatePresence(&discordPresence);
 }
 
-void handleDiscordReady() {
+void handleDiscordReady(const DiscordUser* connectedUser) {
     printf("Discord is ready!\n");
     UpdatePresence();
 }
@@ -301,6 +302,17 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
+    //parse args
+    for (int i = 0; i < argc; ++i) {
+        if (!strcmpi(argv[i], "-debug")) {
+            debugMode = true;
+        }
+    }
+
+    //
+    if(debugMode)
+        printf("! Debug mode active !\n");
+
     //wait for beamng first
     printf("Waiting for BeamNG process...\n");
     while (true) {
@@ -334,9 +346,9 @@ int main(int argc, char* argv[])
             continue; // no use in trying to debug / process empty messages
 
         auto splits = split(message, "|");
-#if _DEBUG
-        printf("message debug: %s \n", message);
-#endif
+        if(debugMode)
+            printf("message debug: %s \n", message.c_str());
+
 
         if (message == "quit") {
             break;
